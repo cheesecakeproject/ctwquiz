@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTW Quiz Station</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="transition-colors duration-300 bg-white dark:bg-gray-900 min-h-screen flex items-center justify-center cursor-pointer select-none">
+    <div class="w-full max-w-2xl px-4 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 md:p-8 transition-all duration-300 relative backdrop-blur-sm bg-opacity-90 dark:bg-opacity-80">
+            <div id="time-display" class="text-xl md:text-2xl lg:text-3xl font-mono bg-gray-50 dark:bg-gray-800 px-4 py-5 rounded-lg text-gray-800 dark:text-gray-100 mb-3 flex items-center justify-center transition-all duration-300 overflow-x-auto whitespace-nowrap border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-copy" title="Click to copy">
+                <span class="opacity-70">Click anywhere</span>
+            </div>
+            
+            <div class="flex items-center justify-between mb-2 px-1">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    h:m:s<span class="text-primary">:subseconds</span>
+                </div>
+                <div id="click-counter" class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                    0 clicks
+                </div>
+            </div>
+            
+            <div id="copy-indicator" class="absolute top-2 right-2 text-xs text-primary opacity-0 transition-opacity duration-300">
+                Copied!
+            </div>
+            
+            <div id="freeze-button" class="absolute bottom-2 right-2 text-xs text-gray-400 dark:text-gray-500 hover:text-primary cursor-pointer transition-colors">
+                freeze
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // UI elements
+        const timeDisplay = document.getElementById('time-display');
+        const clickCounter = document.getElementById('click-counter');
+        const copyIndicator = document.getElementById('copy-indicator');
+        const freezeButton = document.getElementById('freeze-button');
+        
+        // App state
+        let clicks = 0;
+        let isFrozen = false;
+        let lastTimeString = '';
+        
+        // Generate the time string
+        function generateTimeString() {
+            // Get current date and high-precision time
+            const now = new Date();
+            const perfTime = performance.now();
+            
+            // Create a very long fractional part by combining performance.now with random digits
+            let fractionalStr = String(perfTime).replace('.', '');
+            
+            // Add more random digits to make it super long (simulating extremely high precision)
+            while (fractionalStr.length < 30) {
+                fractionalStr += Math.floor(Math.random() * 10);
+            }
+            
+            // Format time components
+            const hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            // Create full time string
+            return {
+                hourMinSec: `${hours}:${minutes}:${seconds}`,
+                subseconds: fractionalStr,
+                fullTime: `${hours}:${minutes}:${seconds}:${fractionalStr}`
+            };
+        }
+        
+        // Event handler for clicks
+        document.body.addEventListener('click', (e) => {
+            // Skip if clicking on the freeze button or if frozen
+            if (e.target === freezeButton || (isFrozen && e.target !== timeDisplay)) {
+                return;
+            }
+            
+            // If clicking on time display directly, handle copy instead of new time
+            if (e.target === timeDisplay || timeDisplay.contains(e.target)) {
+                copyToClipboard();
+                return;
+            }
+            
+            // Generate new time if not frozen
+            if (!isFrozen) {
+                const { hourMinSec, subseconds, fullTime } = generateTimeString();
+                lastTimeString = fullTime;
+                
+                // Update the display
+                timeDisplay.innerHTML = `${hourMinSec}<span class="text-primary">:${subseconds}</span>`;
+                
+                // Update click counter
+                clicks++;
+                clickCounter.textContent = `${clicks} clicks`;
+                
+                // Add animation effect
+                timeDisplay.classList.add('scale-[1.02]', 'shadow-md');
+                setTimeout(() => {
+                    timeDisplay.classList.remove('scale-[1.02]', 'shadow-md');
+                }, 150);
+            }
+        });
+        
+        // Copy to clipboard functionality
+        timeDisplay.addEventListener('click', copyToClipboard);
+        
+        function copyToClipboard() {
+            if (lastTimeString) {
+                navigator.clipboard.writeText(lastTimeString).then(() => {
+                    // Show the copy indicator
+                    copyIndicator.style.opacity = '1';
+                    setTimeout(() => {
+                        copyIndicator.style.opacity = '0';
+                    }, 1500);
+                });
+            }
+        }
+        
+        // Freeze button functionality
+        freezeButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent body click handler
+            
+            isFrozen = !isFrozen;
+            freezeButton.textContent = isFrozen ? 'unfreeze' : 'freeze';
+            
+            if (isFrozen) {
+                timeDisplay.classList.add('border-primary');
+                freezeButton.classList.add('text-primary');
+            } else {
+                timeDisplay.classList.remove('border-primary');
+                freezeButton.classList.remove('text-primary');
+            }
+        });
+    </script>
+</body>
+</html>
